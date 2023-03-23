@@ -23,32 +23,48 @@ fn pbc_distance(atom1: &[f64; 3], atom2: &[f64; 3], box_size: &[f64; 3]) -> f64 
     return (delta_x * delta_x + delta_y * delta_y + delta_z * delta_z).sqrt();
 }
 
-fn cos_alpha(atom1: &[f64; 3], atom2: &[f64; 3], box_size: &[f64; 3]) -> f64 {
-    // for any direction
-    // let scalar_prod =
-    //     (atom1[0] - atom2[0]) * X-component + (atom1[1] - atom2[1]) * Y-component + (atom1[2] - atom2[2]) * Z-component;
-
-    let mut delta_x = atom1[0] - atom2[0];
-
-    if delta_x.abs() > box_size[0] {
-        if delta_x > 0.0 {
-            delta_x = delta_x - box_size[0];
+fn check_pbc(mut delta: f64, box_size: f64) -> f64 {
+    if delta.abs() > box_size {
+        if delta > 0.0 {
+            delta = delta - box_size;
         } else {
-            delta_x = delta_x + box_size[0];
+            delta = delta + box_size;
         }
     }
-
-    let scalar_prod = delta_x; // if we take X-axis direction
-    let vector_length = pbc_distance(atom1, atom2, box_size);
-    return scalar_prod / vector_length;
+    return delta;
 }
 
-fn angle(atom1: &[f64; 3], atom2: &[f64; 3], box_size: &[f64; 3]) -> Radians {
-    return cos_alpha(atom1, atom2, box_size).acos();
+fn cos_alpha(atom1: &[f64; 3], atom2: &[f64; 3], atom3: &[f64; 3], box_size: &[f64; 3]) -> f64 {
+    let len1 = pbc_distance(atom1, atom2, box_size);
+    let len2 = pbc_distance(atom1, atom3, box_size);
+
+    let mut delta_x1 = atom2[0] - atom1[0];
+    let mut delta_y1 = atom2[1] - atom1[1];
+    let mut delta_z1 = atom2[2] - atom1[2];
+
+    let mut delta_x2 = atom3[0] - atom1[0];
+    let mut delta_y2 = atom3[1] - atom1[1];
+    let mut delta_z2 = atom3[2] - atom1[2];
+
+    delta_x1 = check_pbc(delta_x1, box_size[0]);
+    delta_y1 = check_pbc(delta_y1, box_size[1]);
+    delta_z1 = check_pbc(delta_z1, box_size[2]);
+
+    delta_x2 = check_pbc(delta_x2, box_size[0]);
+    delta_y2 = check_pbc(delta_y2, box_size[1]);
+    delta_z2 = check_pbc(delta_z2, box_size[2]);
+
+    let scalar_prod = delta_x1 * delta_x2 + delta_y1 * delta_y2 + delta_z1 * delta_z2;
+
+    return scalar_prod / (len1 * len2);
+}
+
+fn angle(atom1: &[f64; 3], atom2: &[f64; 3], atom3: &[f64; 3], box_size: &[f64; 3]) -> Radians {
+    return cos_alpha(atom1, atom2, atom3, box_size).acos();
 }
 
 type Radians = f64;
-const CUT_DISTANCE: f64 = 4.0;
+const CUT_DISTANCE: f64 = 5.4;
 
 fn main() -> std::io::Result<()> {
     let args: Vec<String> = env::args().collect();
@@ -66,13 +82,19 @@ fn main() -> std::io::Result<()> {
         trajectory.read(&mut frame).unwrap();
         let box_size = frame.cell().lengths();
         let positions = frame.positions();
-        for atom in positions {
-            for other_atom in positions {
-                let dist = pbc_distance(atom, other_atom, &box_size);
-                if (dist < CUT_DISTANCE) & !(dist < 0.0001) {
-                    let angle_value: Radians = angle(atom, other_atom, &box_size);
-                    if !angle_value.is_nan() {
-                        writeln!(writer, "{angle_value}")?;
+
+        for central_atom in positions {
+            for second_atom in positions {
+                for third_atom in positions {
+                    let dist1 = pbc_distance(central_atom, second_atom, &box_size);
+                    let dist2 = pbc_distance(central_atom, third_atom, &box_size);
+                    if (dist1 < CUT_DISTANCE) & (dist2 < CUT_DISTANCE) {
+                        let angle_value: Radians =
+                            angle(central_atom, second_atom, third_atom,
+                                 &box_size);
+                        if !angle_value.is_nan() {
+                            writeln!(writer, "{angle_value}")?;
+                        }
                     }
                 }
             }
