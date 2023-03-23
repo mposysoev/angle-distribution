@@ -85,13 +85,12 @@ fn main() -> std::io::Result<()> {
 
         for central_atom in positions {
             for second_atom in positions {
+                let dist1 = pbc_distance(central_atom, second_atom, &box_size);
                 for third_atom in positions {
-                    let dist1 = pbc_distance(central_atom, second_atom, &box_size);
                     let dist2 = pbc_distance(central_atom, third_atom, &box_size);
                     if (dist1 < CUT_DISTANCE) & (dist2 < CUT_DISTANCE) {
                         let angle_value: Radians =
-                            angle(central_atom, second_atom, third_atom,
-                                 &box_size);
+                            angle(central_atom, second_atom, third_atom, &box_size);
                         if !angle_value.is_nan() {
                             writeln!(writer, "{angle_value}")?;
                         }
