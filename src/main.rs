@@ -64,11 +64,14 @@ fn angle(atom1: &[f64; 3], atom2: &[f64; 3], atom3: &[f64; 3], box_size: &[f64; 
 }
 
 type Radians = f64;
-const CUT_DISTANCE: f64 = 5.4;
+//const CUT_DISTANCE: f64 = 3.8;
 
 fn main() -> std::io::Result<()> {
     let args: Vec<String> = env::args().collect();
     let file_path = &args[1];
+    let rcutoff_arg = &args[2];
+    let rcutoff = rcutoff_arg.parse::<f64>().unwrap();
+    println!("Using {rcutoff} A cutoff radius.");
 
     let output_file = File::create(format!("{file_path}-angles.txt"))?;
     let mut writer = BufWriter::new(output_file);
@@ -88,7 +91,7 @@ fn main() -> std::io::Result<()> {
                 let dist1 = pbc_distance(central_atom, second_atom, &box_size);
                 for third_atom in positions {
                     let dist2 = pbc_distance(central_atom, third_atom, &box_size);
-                    if (dist1 < CUT_DISTANCE) & (dist2 < CUT_DISTANCE) {
+                    if (0.0 < dist1 && dist1 < rcutoff) & (0.0 < dist2 && dist2 < rcutoff) & (dist1 != dist2){
                         let angle_value: Radians =
                             angle(central_atom, second_atom, third_atom, &box_size);
                         if !angle_value.is_nan() {
