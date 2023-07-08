@@ -64,17 +64,25 @@ fn angle(atom1: &[f64; 3], atom2: &[f64; 3], atom3: &[f64; 3], box_size: &[f64; 
 }
 
 type Radians = f64;
-//const CUT_DISTANCE: f64 = 3.8;
 
 fn main() -> std::io::Result<()> {
     let args: Vec<String> = env::args().collect();
     let file_path = &args[1];
-    let rcutoff_arg = &args[2];
-    let rcutoff = rcutoff_arg.parse::<f64>().unwrap();
-    println!("Using {rcutoff} A cutoff radius.");
+    let rcutoff_1_arg = &args[2];
+    let rcutoff_2_arg = &args[3];
+    let rcutoff_1 = rcutoff_1_arg.parse::<f64>().unwrap(); // 3.8
+    let rcutoff_2 = rcutoff_2_arg.parse::<f64>().unwrap(); // 6.2
+    println!("Using {rcutoff_1} A cutoff radius for the first shell.");
+    println!("Using {rcutoff_2} A cutoff radius for the second shell.");
 
-    let output_file = File::create(format!("{file_path}-angles.txt"))?;
-    let mut writer = BufWriter::new(output_file);
+    let output_file_11 = File::create(format!("{file_path}-angles_11.txt"))?;
+    let output_file_12 = File::create(format!("{file_path}-angles_12.txt"))?;
+    let output_file_22 = File::create(format!("{file_path}-angles_22.txt"))?;
+    let output_file_all = File::create(format!("{file_path}-angles_all.txt"))?;
+    let mut writer_11 = BufWriter::new(output_file_11);
+    let mut writer_12 = BufWriter::new(output_file_12);
+    let mut writer_22 = BufWriter::new(output_file_22);
+    let mut writer_all = BufWriter::new(output_file_all);
 
     let mut trajectory = Trajectory::open(file_path, 'r').unwrap();
     let mut frame = Frame::new();
@@ -93,11 +101,44 @@ fn main() -> std::io::Result<()> {
                     for third_atom in positions {
                         if third_atom != central_atom && third_atom != second_atom {
                             let dist2 = pbc_distance(central_atom, third_atom, &box_size);
-                            if (0.0 < dist1 && dist1 < rcutoff) & (0.0 < dist2 && dist2 < rcutoff) {
+                            if (0.0 < dist1 && dist1 < rcutoff_1) & (0.0 < dist2 && dist2 < rcutoff_1) {
                                 let angle_value: Radians =
                                     angle(central_atom, second_atom, third_atom, &box_size);
                                 if !angle_value.is_nan() {
-                                    writeln!(writer, "{angle_value}")?;
+                                    writeln!(writer_11, "{angle_value}")?;
+                            
+                                }
+                            }
+                            if (0.0 < dist1 && dist1 < rcutoff_1) & (rcutoff_1 < dist2 && dist2 < rcutoff_2) {
+                                let angle_value: Radians =
+                                    angle(central_atom, second_atom, third_atom, &box_size);
+                                if !angle_value.is_nan() {
+                                    writeln!(writer_12, "{angle_value}")?;
+                            
+                                }
+                            }
+                            if (rcutoff_1 < dist1 && dist1 < rcutoff_2) & (0.0 < dist2 && dist2 < rcutoff_1) {
+                                let angle_value: Radians =
+                                    angle(central_atom, second_atom, third_atom, &box_size);
+                                if !angle_value.is_nan() {
+                                    writeln!(writer_12, "{angle_value}")?;
+                            
+                                }
+                            }
+                            if (rcutoff_1 < dist1 && dist1 < rcutoff_2) & (rcutoff_1 < dist2 && dist2 < rcutoff_2) {
+                                let angle_value: Radians =
+                                    angle(central_atom, second_atom, third_atom, &box_size);
+                                if !angle_value.is_nan() {
+                                    writeln!(writer_22, "{angle_value}")?;
+                            
+                                }
+                            }
+                            if (0.0 < dist1 && dist1 < rcutoff_2) & (0.0 < dist2 && dist2 < rcutoff_2) {
+                                let angle_value: Radians =
+                                    angle(central_atom, second_atom, third_atom, &box_size);
+                                if !angle_value.is_nan() {
+                                    writeln!(writer_all, "{angle_value}")?;
+                            
                                 }
                             }
                         }
