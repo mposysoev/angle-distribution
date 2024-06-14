@@ -7,3 +7,11 @@ edition = "2021"
 
 [dependencies]
 chemfiles = "0.10"
+rayon = "1.5"
+
+[profile.release]
+opt-level = 3  # Optimize for size, change to "s" if more aggressive optimizations are needed
+lto = true  # Enable Link Time Optimization
+codegen-units = 1  # Single codegen unit for better optimization
+debug = false  # Disable debug information
+panic = 'abort'  # Abort on panic, reduces binary size
